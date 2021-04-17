@@ -1,5 +1,25 @@
 import scapy.all as scapy
+import argparse
 import time
+
+
+def get_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', '--target', dest='target',
+                        help='Target IP / IP range.')
+
+    parser.add_argument('-g', '--gateway', dest='gateway',
+                        help='Gateway IP address.')
+
+    options = parser.parse_args()
+    if not options.target:
+        parser.error(
+            '[-] Please specify a Target IP, use --help for more info.')
+    if not options.gateway:
+        parser.error(
+            '[-] Please specify a Gateway IP, use --help for more info.')
+
+    return options
 
 
 def get_mac(ip):
@@ -10,8 +30,11 @@ def get_mac(ip):
     answered_list = scapy.srp(
         arp_request_broadcast, timeout=1, verbose=False)[0]
 
-    res = answered_list[0][1].hwsrc
-    # print(res)
+    try:
+        res = answered_list[0][1].hwsrc
+    except IndexError:
+        print('Failed ARP')
+        print(answered_list)
     return res
 
 
@@ -42,6 +65,10 @@ if __name__ == '__main__':
 
     target_ip = '10.0.2.10'
     gateway_ip = '10.0.2.1'
+
+    # options = get_arguments()
+    # target_ip = options.target
+    # gateway_ip = options.gateway
 
     try:
         sent_packets_count = 0
