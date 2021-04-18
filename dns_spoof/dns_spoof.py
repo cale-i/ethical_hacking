@@ -1,24 +1,45 @@
 import netfilterqueue
 import scapy.all as scapy
 import subprocess
+import argparse
 
 
 class Command():
 
     def __init__(self):
 
-        # local
-        subprocess.call(['iptables', '-I', 'OUTPUT', '-j',
-                         'NFQUEUE', '--queue-num', '0'])
-        subprocess.call(['iptables', '-I', 'INPUT', '-j',
-                         'NFQUEUE', '--queue-num', '0'])
-
-        # remote
-        # subprocess.call(['iptables', '-I', 'FORWARD', '-j',
-        #                  'NFQUEUE', '--queue-num', '0'])
+        self.options = self.get_arguments()
+        if self.options.target == 'local':
+            # local
+            subprocess.call(['iptables', '-I', 'OUTPUT', '-j',
+                             'NFQUEUE', '--queue-num', '0'])
+            subprocess.call(['iptables', '-I', 'INPUT', '-j',
+                             'NFQUEUE', '--queue-num', '0'])
+        elif self.options.target == 'remote':
+            # remote
+            subprocess.call(
+                ['echo', '1', '>', '/proc/sys/net/ipv4/ip_forward'])
+            subprocess.call(['iptables', '-I', 'FORWARD', '-j',
+                             'NFQUEUE', '--queue-num', '0'])
 
     def close(self):
+        if self.options.target == 'remote':
+            subprocess.call(
+                ['echo', '0', '>', '/proc/sys/net/ipv4/ip_forward'])
+
         subprocess.call(['iptables', '--flush'])
+
+    def get_arguments(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('-t', '--target', dest='target',
+                            help='target machine -- specify "local" or "remote"')
+
+        options = parser.parse_args()
+        if not options.target:
+            parser.error(
+                '[-] Please specify a target machine, use --help for more info.')
+
+        return options
 
 
 def process_packet(packet):
